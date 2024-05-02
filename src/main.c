@@ -239,7 +239,8 @@ Cdilla_Code_Block_Id cdilla_parse_code_block(Cdilla_Ast *ast, Cdilla_Lexer *lexe
 
 Cdilla_Ast cdilla_parse(Cdilla_Lexer *lexer) {
     Cdilla_Ast ast = {0};
-    while (true) {
+    bool stop = false;
+    while (!stop) {
         Cdilla_Token token = cdilla_parse_next(lexer);
         switch (token.kind) {
         case CDILLA_TOKEN_PROC: {
@@ -252,7 +253,7 @@ Cdilla_Ast cdilla_parse(Cdilla_Lexer *lexer) {
             da_append(&ast.procedures, proc);
         } break;
         case CDILLA_TOKEN_END: {
-            goto end;
+            stop = true;
         } break;
         default: {
             fprintf(
@@ -266,7 +267,6 @@ Cdilla_Ast cdilla_parse(Cdilla_Lexer *lexer) {
         } break;
         }
     }
-end:
     return ast;
 }
 
