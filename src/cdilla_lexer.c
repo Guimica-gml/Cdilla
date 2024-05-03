@@ -65,10 +65,6 @@ size_t utf8_sv_char_count(String_View sv) {
 }
 
 Cdilla_Lexer cdilla_lexer_new(String_View content, const char *source_filepath) {
-    String_View test = SV("ç");
-    printf("String view size: %zu\n", test.count);
-    printf("Actual size: %zu\n", utf8_sv_char_count(test));
-
     Cdilla_Lexer lexer = {0};
     lexer.filepath = source_filepath;
     lexer.content = content;
