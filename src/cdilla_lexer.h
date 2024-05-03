@@ -56,6 +56,9 @@ typedef struct {
     Cdilla_Token_Kind kind;
 } Cdilla_Token_Literal;
 
+#define cdilla_lexer_cut_char(lexer) \
+    cdilla_lexer_cut_char_impl((lexer), __FILE__, __LINE__)
+
 #define cdilla_lexer_cut(lexer, count) \
     cdilla_lexer_cut_impl((lexer), (count), __FILE__, __LINE__)
 
@@ -65,6 +68,8 @@ typedef struct {
 const char *cdilla_token_kind_cstr_impl(Cdilla_Token_Kind kind, const char *file, int line);
 
 Cdilla_Lexer cdilla_lexer_new(String_View content, const char *source_filepath);
+// NOTE(nic): this respects utf8 strings, that's why it returns String_View
+String_View cdilla_lexer_cut_char_impl(Cdilla_Lexer *lexer, const char *file, int line);
 String_View cdilla_lexer_cut_impl(Cdilla_Lexer *lexer, size_t count, const char *file, int line);
 // NOTE(nic): isdigit, isalnum and isspace are int (*)(int), don't ask me why
 String_View cdilla_lexer_cut_while(Cdilla_Lexer *lexer, int (*predicate)(int));

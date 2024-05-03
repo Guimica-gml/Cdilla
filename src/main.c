@@ -148,10 +148,9 @@ Cdilla_Expression_Id cdilla_parse_expression(Cdilla_Ast *ast, Cdilla_Lexer *lexe
         expression.as.int_32 = int_32;
     } break;
     case CDILLA_TOKEN_STRING: {
-        char string[token.text.count + 1];
-        size_t len = 0;
-
+        size_t begin = ast->strings.count;
         size_t i = 1;
+
         while (i < token.text.count - 1) {
             char ch = token.text.data[i++];
             if (ch == '\\') {
@@ -159,7 +158,7 @@ Cdilla_Expression_Id cdilla_parse_expression(Cdilla_Ast *ast, Cdilla_Lexer *lexe
                 bool exists = false;
                 for (size_t j = 0; j < array_len(escape_chars); ++j) {
                     if (escape_chars[j].ch == next_ch) {
-                        string[len++] = escape_chars[j].escape_ch;
+                        da_append(&ast->strings, escape_chars[j].escape_ch);
                         exists = true;
                         break;
                     }
@@ -172,13 +171,10 @@ Cdilla_Expression_Id cdilla_parse_expression(Cdilla_Ast *ast, Cdilla_Lexer *lexe
                     exit(1);
                 }
             } else {
-                string[len++] = ch;
+                da_append(&ast->strings, ch);
             }
         }
-        string[len++] = '\0';
-
-        size_t begin = ast->strings.count;
-        sb_add_sized_str(&ast->strings, string, len);
+        da_append(&ast->strings, '\0');
 
         expression.kind = CDILLA_EXPRESSION_STRING;
         expression.as.string_index = begin;
@@ -256,6 +252,7 @@ Cdilla_Ast cdilla_parse(Cdilla_Lexer *lexer) {
             stop = true;
         } break;
         default: {
+            printf(SV_FMT"\n", SV_ARG(token.text));
             fprintf(
                 stderr,
                 LOC_FMT": Error: expected `%s` or `%s`, but got `%s`\n",

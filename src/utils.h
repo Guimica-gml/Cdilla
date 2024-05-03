@@ -19,6 +19,17 @@
 #define SV_FMT "%.*s"
 #define SV_ARG(sv) (int) (sv).count, (sv).data
 
+#define BYTE_FMT "%c%c%c%c%c%c%c%c"
+#define BYTE_ARG(byte)           \
+    ((byte) & 0x80 ? '1' : '0'), \
+    ((byte) & 0x40 ? '1' : '0'), \
+    ((byte) & 0x20 ? '1' : '0'), \
+    ((byte) & 0x10 ? '1' : '0'), \
+    ((byte) & 0x08 ? '1' : '0'), \
+    ((byte) & 0x04 ? '1' : '0'), \
+    ((byte) & 0x02 ? '1' : '0'), \
+    ((byte) & 0x01 ? '1' : '0')
+
 typedef int8_t i8;
 typedef int16_t i16;
 typedef int32_t i32;
