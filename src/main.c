@@ -256,6 +256,7 @@ Cdilla_Ast cdilla_parse(Cdilla_Lexer *lexer) {
             stop = true;
         } break;
         default: {
+            printf(SV_FMT"\n", SV_ARG(token.text));
             fprintf(
                 stderr,
                 LOC_FMT": Error: expected `%s` or `%s`, but got `%s`\n",
