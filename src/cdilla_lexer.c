@@ -165,26 +165,31 @@ Cdilla_Token cdilla_lexer_next(Cdilla_Lexer *lexer) {
     }
 
     if (lexer->content.data[lexer->index] == '"') {
-        size_t count = 1;
+        const char *begin = &lexer->content.data[lexer->index];
+        cdilla_lexer_cut_char(lexer);
+
+        size_t begin_count = lexer->index;
         Cdilla_Token_Kind kind = CDILLA_TOKEN_UNCLOSED_STRING;
-        while (lexer->index + count < lexer->content.count) {
-            char ch = lexer->content.data[lexer->index + count];
+
+        while (lexer->index < lexer->content.count) {
+            char ch = lexer->content.data[lexer->index];
             if (ch == '\n') {
                 break;
             }
-            count += 1;
+            cdilla_lexer_cut_char(lexer);
             if (ch == '"') {
                 kind = CDILLA_TOKEN_STRING;
                 break;
             }
             if (ch == '\\') {
-                if (lexer->index + count >= lexer->content.count) {
+                if (lexer->index >= lexer->content.count) {
                     break;
                 }
-                count += 1;
+                cdilla_lexer_cut_char(lexer);
             }
         }
-        String_View text = cdilla_lexer_cut(lexer, count);
+
+        String_View text = { begin, lexer->index - begin_count };
         return (Cdilla_Token) { text, kind, loc };
     }
 
