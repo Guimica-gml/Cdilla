@@ -261,6 +261,56 @@ void cdilla_ast_free(Cdilla_Ast *ast) {
     sb_free(&ast->strings);
 }
 
+void cdilla_ast_print(Cdilla_Ast *ast) {
+    printf("Functions:\n");
+    for (size_t i = 0; i < ast->procedures.count; ++i) {
+        Cdilla_Procedure *proc = &ast->procedures.items[i];
+        printf(SV_FMT": code block id: %zu\n", SV_ARG(proc->name), proc->code_block_id);
+    }
+    printf("\n");
+
+    printf("Code_Blocks:\n");
+    for (size_t i = 0; i < ast->code_blocks.count; ++i) {
+        Cdilla_Code_Block *code_block = &ast->code_blocks.items[i];
+        printf("%zu:\n", i);
+        if (code_block->count == 0) printf("<empty>\n");
+        for (size_t j = 0; j < code_block->count; ++j) {
+            Cdilla_Statement *statement = &code_block->items[j];
+            switch (statement->kind) {
+            case CDILLA_STATEMENT_PRINT: {
+                printf("print: expression id: %zu\n", statement->as.print.expr_id);
+            } break;
+            default: assert(0 && "unreachable");
+            }
+        }
+        printf("\n");
+    }
+
+    printf("Expressions:\n");
+    for (size_t i = 0; i < ast->expressions.count; ++i) {
+        printf("%zu: ", i);
+        Cdilla_Expression *expr = &ast->expressions.items[i];
+        switch (expr->kind) {
+        case CDILLA_EXPRESSION_I32: {
+            printf("Integer: %d", expr->as.int_32);
+        } break;
+        case CDILLA_EXPRESSION_STRING: {
+            printf("String Index: %zu", expr->as.string_index);
+        } break;
+        default: assert(0 && "unreachable");
+        }
+        printf("\n");
+    }
+    printf("\n");
+
+    printf("Strings:\n");
+    for (size_t i = 0; i < ast->strings.count; ++i) {
+        printf("0x%02X ", (unsigned char) ast->strings.items[i]);
+    }
+    printf("\n");
+
+}
+
 void print_usage(FILE *stream, const char *program) {
     fprintf(stream, "Usage: %s <filepath>", program);
 }
@@ -287,7 +337,9 @@ int main(int argc, char **argv) {
     Cdilla_Lexer lexer = cdilla_lexer_new(code, source_filepath);
     Cdilla_Ast ast = cdilla_parse(&lexer);
 
+    cdilla_ast_print(&ast);
     cdilla_ast_free(&ast);
+
     sb_free(&content);
     return 0;
 }
