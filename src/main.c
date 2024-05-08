@@ -312,7 +312,7 @@ void cdilla_ast_print(Cdilla_Ast *ast) {
 }
 
 void print_usage(FILE *stream, const char *program) {
-    fprintf(stream, "Usage: %s <filepath>", program);
+    fprintf(stream, "Usage: %s <filepath>\n", program);
 }
 
 int main(int argc, char **argv) {
