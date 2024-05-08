@@ -1,9 +1,10 @@
 proc main() {
     print("😃: Hello, world!\n");
     print("😥: Good bye, world!\n");
+    second();
 }
 
-proc hello() {
+proc second() {
     print(10);
     print("\n");
 }

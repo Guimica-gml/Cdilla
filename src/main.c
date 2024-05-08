@@ -28,14 +28,20 @@ typedef struct {
 
 typedef enum {
     CDILLA_STATEMENT_PRINT,
+    CDILLA_STATEMENT_PROC_CALL,
 } Cdilla_Statement_Kind;
 
 typedef struct {
     Cdilla_Expression_Id expr_id;
 } Cdilla_Statement_As_Print;
 
+typedef struct {
+    String_View name;
+} Cdilla_Statement_As_Proc_Call;
+
 typedef union {
     Cdilla_Statement_As_Print print;
+    Cdilla_Statement_As_Proc_Call proc_call;
 } Cdilla_Statement_As;
 
 typedef struct {
@@ -201,7 +207,7 @@ Cdilla_Code_Block_Id cdilla_parse_code_block(Cdilla_Ast *ast, Cdilla_Lexer *lexe
     Cdilla_Code_Block code_block = {0};
     cdilla_parse_expect(lexer, CDILLA_TOKEN_OPEN_CURLY);
 
-    Cdilla_Token token = cdilla_parse_expect(lexer, CDILLA_TOKEN_PRINT, CDILLA_TOKEN_CLOSE_CURLY);
+    Cdilla_Token token = cdilla_parse_expect(lexer, CDILLA_TOKEN_PRINT, CDILLA_TOKEN_IDENTIFIER, CDILLA_TOKEN_CLOSE_CURLY);
     while (token.kind != CDILLA_TOKEN_CLOSE_CURLY) {
         Cdilla_Statement statement = {0};
         switch (token.kind) {
@@ -215,6 +221,17 @@ Cdilla_Code_Block_Id cdilla_parse_code_block(Cdilla_Ast *ast, Cdilla_Lexer *lexe
             statement.kind = CDILLA_STATEMENT_PRINT;
             statement.as.print = (Cdilla_Statement_As_Print) {
                 expression_id,
+            };
+        } break;
+        case CDILLA_TOKEN_IDENTIFIER: {
+            cdilla_parse_expect(lexer, CDILLA_TOKEN_OPEN_PAREN);
+            cdilla_parse_expect(lexer, CDILLA_TOKEN_CLOSE_PAREN);
+            cdilla_parse_expect(lexer, CDILLA_TOKEN_SEMI_COLON);
+
+            statement.loc = token.loc;
+            statement.kind = CDILLA_STATEMENT_PROC_CALL;
+            statement.as.proc_call = (Cdilla_Statement_As_Proc_Call) {
+                token.text,
             };
         } break;
         default: assert(0 && "unreachable");
@@ -279,6 +296,9 @@ void cdilla_ast_print(Cdilla_Ast *ast) {
             switch (statement->kind) {
             case CDILLA_STATEMENT_PRINT: {
                 printf("print: expression id: %zu\n", statement->as.print.expr_id);
+            } break;
+            case CDILLA_STATEMENT_PROC_CALL: {
+                printf("proc_call: proc name: "SV_FMT"\n", SV_ARG(statement->as.proc_call.name));
             } break;
             default: assert(0 && "unreachable");
             }
