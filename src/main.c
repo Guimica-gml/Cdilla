@@ -100,18 +100,29 @@ Cdilla_Token cdilla_parse_next(Cdilla_Lexer *lexer) {
     return token;
 }
 
-Cdilla_Token cdilla_parse_expect(Cdilla_Lexer *lexer, Cdilla_Token_Kind kind) {
+#define cdilla_parse_expect(lexer, ...)                                 \
+    cdilla_parse_expect_impl(                                           \
+        (lexer),                                                        \
+        ((Cdilla_Token_Kind[]){__VA_ARGS__}),                           \
+        (sizeof((Cdilla_Token_Kind[]){__VA_ARGS__}))/sizeof(Cdilla_Token_Kind))
+
+Cdilla_Token cdilla_parse_expect_impl(Cdilla_Lexer *lexer, Cdilla_Token_Kind kinds[], size_t count) {
     Cdilla_Token token = cdilla_parse_next(lexer);
-    if (token.kind != kind) {
-        fprintf(
-            stderr,
-            LOC_FMT": Error: expected `%s`, but got `%s`\n",
-            LOC_ARG(token.loc),
-            cdilla_token_kind_cstr(kind),
-            cdilla_token_kind_cstr(token.kind));
-        exit(1);
+    for (size_t i = 0; i < count; ++i) {
+        if (token.kind == kinds[i]) {
+            return token;
+        }
     }
-    return token;
+
+    // NOTE(nic): Looks kinda goofy, but does what we need it to do
+    fprintf(stderr, LOC_FMT": Error: expected ", LOC_ARG(token.loc));
+    for (size_t i = 0; i < count; ++i) {
+        fprintf(stderr, "`%s`", cdilla_token_kind_cstr(kinds[i]));
+        const char *end = (i == count - 2) ? " or " : ", ";
+        fprintf(stderr, "%s", end);
+    }
+    fprintf(stderr, "but got `%s`\n", cdilla_token_kind_cstr(token.kind));
+    exit(1);
 }
 
 i32 sv_to_i32(String_View sv) {
@@ -140,7 +151,7 @@ Escape_Char_Def escape_chars[] = {
 Cdilla_Expression_Id cdilla_parse_expression(Cdilla_Ast *ast, Cdilla_Lexer *lexer) {
     Cdilla_Expression expression = {0};
 
-    Cdilla_Token token = cdilla_parse_next(lexer);
+    Cdilla_Token token = cdilla_parse_expect(lexer, CDILLA_TOKEN_INTEGER, CDILLA_TOKEN_STRING);
     switch (token.kind) {
     case CDILLA_TOKEN_INTEGER: {
         i32 int_32 = sv_to_i32(token.text);
@@ -179,16 +190,7 @@ Cdilla_Expression_Id cdilla_parse_expression(Cdilla_Ast *ast, Cdilla_Lexer *lexe
         expression.kind = CDILLA_EXPRESSION_STRING;
         expression.as.string_index = begin;
     } break;
-    default: {
-        fprintf(
-            stderr,
-            LOC_FMT": Error: expected `%s` or `%s`, but got `%s`\n",
-            LOC_ARG(token.loc),
-            cdilla_token_kind_cstr(CDILLA_TOKEN_INTEGER),
-            cdilla_token_kind_cstr(CDILLA_TOKEN_STRING),
-            cdilla_token_kind_cstr(token.kind));
-        exit(1);
-    } break;
+    default: assert(0 && "unreachable");
     }
 
     da_append(&ast->expressions, expression);
@@ -199,7 +201,7 @@ Cdilla_Code_Block_Id cdilla_parse_code_block(Cdilla_Ast *ast, Cdilla_Lexer *lexe
     Cdilla_Code_Block code_block = {0};
     cdilla_parse_expect(lexer, CDILLA_TOKEN_OPEN_CURLY);
 
-    Cdilla_Token token = cdilla_parse_next(lexer);
+    Cdilla_Token token = cdilla_parse_expect(lexer, CDILLA_TOKEN_PRINT, CDILLA_TOKEN_CLOSE_CURLY);
     while (token.kind != CDILLA_TOKEN_CLOSE_CURLY) {
         Cdilla_Statement statement = {0};
         switch (token.kind) {
@@ -215,15 +217,7 @@ Cdilla_Code_Block_Id cdilla_parse_code_block(Cdilla_Ast *ast, Cdilla_Lexer *lexe
                 expression_id,
             };
         } break;
-        default: {
-            fprintf(
-                stderr,
-                LOC_FMT": Error: expected `%s`, but got `%s`\n",
-                LOC_ARG(token.loc),
-                cdilla_token_kind_cstr(CDILLA_TOKEN_PRINT),
-                cdilla_token_kind_cstr(token.kind));
-            exit(1);
-        } break;
+        default: assert(0 && "unreachable");
         }
         da_append(&code_block, statement);
         token = cdilla_parse_next(lexer);
@@ -237,7 +231,7 @@ Cdilla_Ast cdilla_parse(Cdilla_Lexer *lexer) {
     Cdilla_Ast ast = {0};
     bool stop = false;
     while (!stop) {
-        Cdilla_Token token = cdilla_parse_next(lexer);
+        Cdilla_Token token = cdilla_parse_expect(lexer, CDILLA_TOKEN_PROC, CDILLA_TOKEN_END);
         switch (token.kind) {
         case CDILLA_TOKEN_PROC: {
             Cdilla_Token ident = cdilla_parse_expect(lexer, CDILLA_TOKEN_IDENTIFIER);
@@ -251,17 +245,7 @@ Cdilla_Ast cdilla_parse(Cdilla_Lexer *lexer) {
         case CDILLA_TOKEN_END: {
             stop = true;
         } break;
-        default: {
-            printf(SV_FMT"\n", SV_ARG(token.text));
-            fprintf(
-                stderr,
-                LOC_FMT": Error: expected `%s` or `%s`, but got `%s`\n",
-                LOC_ARG(token.loc),
-                cdilla_token_kind_cstr(CDILLA_TOKEN_PROC),
-                cdilla_token_kind_cstr(CDILLA_TOKEN_END),
-                cdilla_token_kind_cstr(token.kind));
-            exit(1);
-        } break;
+        default: assert(0 && "unreachable");
         }
     }
     return ast;
