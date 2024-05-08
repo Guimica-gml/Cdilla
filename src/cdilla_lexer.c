@@ -1,6 +1,6 @@
 #include "./cdilla_lexer.h"
 
-Cdilla_Token_Literal cdilla_symbol_literals[] = {
+Cdilla_Token_Literal cdilla_symbols[] = {
     { .text = SV("("), .kind = CDILLA_TOKEN_OPEN_PAREN },
     { .text = SV(")"), .kind = CDILLA_TOKEN_CLOSE_PAREN },
     { .text = SV("{"), .kind = CDILLA_TOKEN_OPEN_CURLY },
@@ -8,18 +8,10 @@ Cdilla_Token_Literal cdilla_symbol_literals[] = {
     { .text = SV(";"), .kind = CDILLA_TOKEN_SEMI_COLON },
 };
 
-Cdilla_Token_Literal cdilla_keyword_literals[] = {
+Cdilla_Token_Literal cdilla_keywords[] = {
     { .text = SV("proc"), .kind = CDILLA_TOKEN_PROC },
     { .text = SV("print"), .kind = CDILLA_TOKEN_PRINT },
 };
-
-int cdilla_is_ident_body(int ch) {
-    return isalpha(ch);
-}
-
-int cdilla_is_ident_head(int ch) {
-    return isalnum(ch);
-}
 
 const char *cdilla_token_kind_cstr_impl(Cdilla_Token_Kind kind, const char *file, int line) {
     switch (kind) {
@@ -139,19 +131,19 @@ Cdilla_Token cdilla_lexer_next(Cdilla_Lexer *lexer) {
         };
     }
 
-    for (size_t i = 0; i < array_len(cdilla_symbol_literals); ++i) {
-        Cdilla_Token_Literal *literal = &cdilla_symbol_literals[i];
+    for (size_t i = 0; i < array_len(cdilla_symbols); ++i) {
+        Cdilla_Token_Literal *literal = &cdilla_symbols[i];
         if (cdilla_lexer_starts_with(lexer, literal->text)) {
             String_View text = cdilla_lexer_cut(lexer, literal->text.count);
             return (Cdilla_Token) { text, literal->kind, loc };
         }
     }
 
-    if (cdilla_is_ident_head(lexer->content.data[lexer->index])) {
-        String_View text = cdilla_lexer_cut_while(lexer, cdilla_is_ident_body);
+    if (isalpha(lexer->content.data[lexer->index])) {
+        String_View text = cdilla_lexer_cut_while(lexer, isalnum);
         Cdilla_Token_Kind kind = CDILLA_TOKEN_IDENTIFIER;
-        for (size_t i = 0; i < array_len(cdilla_keyword_literals); ++i) {
-            Cdilla_Token_Literal *literal = &cdilla_keyword_literals[i];
+        for (size_t i = 0; i < array_len(cdilla_keywords); ++i) {
+            Cdilla_Token_Literal *literal = &cdilla_keywords[i];
             if (sv_eq(text, literal->text)) {
                 kind = literal->kind;
             }
