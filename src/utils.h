@@ -44,29 +44,53 @@ typedef double f64;
 
 typedef int Errno;
 
-#define DA_INIT_CAP 512
-#define da_append(da, item)                                             \
-    do {                                                                \
-        if ((da)->capacity <= (da)->count) {                            \
-            (da)->capacity = ((da)->capacity == 0) ? DA_INIT_CAP : (da)->capacity * 2; \
-            (da)->items = realloc((da)->items, (da)->capacity * sizeof(*(da)->items)); \
-        }                                                               \
-        (da)->items[(da)->count++] = (item);                            \
-    } while(0);
+#define DA_INIT_CAP 1024
+
+typedef struct {
+    size_t count;
+    size_t capacity;
+} Da_Header;
+
+#define Da_Type(type)                           \
+    struct {                                    \
+        Da_Header header;                       \
+        type *items;                            \
+    }
+
+#define da_append(da, item)                     \
+    da_append_impl(                             \
+        ((void**) (&(da)->items)),              \
+        (&(da)->header),                        \
+        &item,                                  \
+        sizeof(*(da)->items))
+
+#define da_set(da, index, item)                 \
+    da_set_impl(                                \
+        (da)->items,                            \
+        (&(da)->header),                        \
+        &item),                                 \
+        sizeof(*(da)->items),                   \
+        index)
+
+#define da_get(da, index)                       \
+    da_get_impl(                                \
+        (da)->items,                            \
+        (&(da)->header),                        \
+        sizeof(*(da)->items),                   \
+        index)
 
 #define da_free(da)                             \
     do {                                        \
         free((da)->items);                      \
         (da)->items = NULL;                     \
-        (da)->count = 0;                        \
-        (da)->capacity = 0;                     \
-    } while (0);
+        (da)->header.count = 0;                 \
+        (da)->header.capacity = 0;              \
+    } while(0);
 
-typedef struct {
-    char *items;
-    size_t count;
-    size_t capacity;
-} String_Builder;
+#define da_count(da) (da)->header.count
+#define da_cap(da) (da)->header.capacity
+
+typedef Da_Type(char) String_Builder;
 
 typedef struct {
     const char *data;

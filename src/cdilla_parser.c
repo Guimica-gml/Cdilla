@@ -62,18 +62,18 @@ i32 sv_to_i32(String_View sv) {
     return result;
 }
 
-Cdilla_Expression_Id cdilla_parse_expression(Cdilla_Ast *ast, Cdilla_Lexer *lexer) {
-    Cdilla_Expression expression = {0};
+Cdilla_Expr_Id cdilla_parse_expression(Cdilla_Ast *ast, Cdilla_Lexer *lexer) {
+    Cdilla_Expr expr = {0};
 
     Cdilla_Token token = cdilla_parse_expect(lexer, CDILLA_TOKEN_INTEGER, CDILLA_TOKEN_STRING);
     switch (token.kind) {
     case CDILLA_TOKEN_INTEGER: {
         i32 int32 = sv_to_i32(token.text);
-        expression.kind = CDILLA_EXPRESSION_I32;
-        expression.as.int32 = int32;
+        expr.kind = CDILLA_EXPRESSION_I32;
+        expr.as.int32 = int32;
     } break;
     case CDILLA_TOKEN_STRING: {
-        size_t begin = ast->strings.count;
+        size_t begin = da_count(&ast->strings);
         size_t i = 1;
 
         while (i < token.text.count - 1) {
@@ -99,16 +99,16 @@ Cdilla_Expression_Id cdilla_parse_expression(Cdilla_Ast *ast, Cdilla_Lexer *lexe
                 da_append(&ast->strings, ch);
             }
         }
-        da_append(&ast->strings, '\0');
+        char ch = '\0';
+        da_append(&ast->strings, ch);
 
-        expression.kind = CDILLA_EXPRESSION_STRING;
-        expression.as.string_index = begin;
+        expr.kind = CDILLA_EXPRESSION_STRING;
+        expr.as.string_index = begin;
     } break;
     default: assert(0 && "unreachable");
     }
 
-    da_append(&ast->expressions, expression);
-    return ast->expressions.count - 1;
+    return da_append(&ast->exprs, expr);
 }
 
 Cdilla_Code_Block_Id cdilla_parse_code_block(Cdilla_Ast *ast, Cdilla_Lexer *lexer) {
@@ -117,17 +117,17 @@ Cdilla_Code_Block_Id cdilla_parse_code_block(Cdilla_Ast *ast, Cdilla_Lexer *lexe
 
     Cdilla_Token token = cdilla_parse_expect(lexer, CDILLA_TOKEN_PRINT, CDILLA_TOKEN_IDENTIFIER, CDILLA_TOKEN_CLOSE_CURLY);
     while (token.kind != CDILLA_TOKEN_CLOSE_CURLY) {
-        Cdilla_Statement statement = {0};
+        Cdilla_Stmt stmt = {0};
         switch (token.kind) {
         case CDILLA_TOKEN_PRINT: {
             cdilla_parse_expect(lexer, CDILLA_TOKEN_OPEN_PAREN);
-            Cdilla_Expression_Id expression_id = cdilla_parse_expression(ast, lexer);
+            Cdilla_Expr_Id expression_id = cdilla_parse_expression(ast, lexer);
             cdilla_parse_expect(lexer, CDILLA_TOKEN_CLOSE_PAREN);
             cdilla_parse_expect(lexer, CDILLA_TOKEN_SEMI_COLON);
 
-            statement.loc = token.loc;
-            statement.kind = CDILLA_STATEMENT_PRINT;
-            statement.as.print = (Cdilla_Statement_As_Print) {
+            stmt.loc = token.loc;
+            stmt.kind = CDILLA_STMT_PRINT;
+            stmt.as.print = (Cdilla_Stmt_As_Print) {
                 expression_id,
             };
         } break;
@@ -136,20 +136,19 @@ Cdilla_Code_Block_Id cdilla_parse_code_block(Cdilla_Ast *ast, Cdilla_Lexer *lexe
             cdilla_parse_expect(lexer, CDILLA_TOKEN_CLOSE_PAREN);
             cdilla_parse_expect(lexer, CDILLA_TOKEN_SEMI_COLON);
 
-            statement.loc = token.loc;
-            statement.kind = CDILLA_STATEMENT_PROC_CALL;
-            statement.as.proc_call = (Cdilla_Statement_As_Proc_Call) {
+            stmt.loc = token.loc;
+            stmt.kind = CDILLA_STMT_PROC_CALL;
+            stmt.as.proc_call = (Cdilla_Stmt_As_Proc_Call) {
                 token.text,
             };
         } break;
         default: assert(0 && "unreachable");
         }
-        da_append(&code_block, statement);
+        da_append(&code_block, stmt);
         token = cdilla_parse_next(lexer);
     }
 
-    da_append(&ast->code_blocks, code_block);
-    return ast->code_blocks.count - 1;
+    return da_append(&ast->code_blocks, code_block);
 }
 
 Cdilla_Ast cdilla_parse(Cdilla_Lexer *lexer) {
@@ -164,8 +163,8 @@ Cdilla_Ast cdilla_parse(Cdilla_Lexer *lexer) {
             cdilla_parse_expect(lexer, CDILLA_TOKEN_CLOSE_PAREN);
 
             Cdilla_Code_Block_Id block_id = cdilla_parse_code_block(&ast, lexer);
-            Cdilla_Procedure proc = { ident.text, block_id };
-            da_append(&ast.procedures, proc);
+            Cdilla_Proc proc = { ident.text, block_id };
+            da_append(&ast.procs, proc);
         } break;
         case CDILLA_TOKEN_END: {
             stop = true;
@@ -177,36 +176,36 @@ Cdilla_Ast cdilla_parse(Cdilla_Lexer *lexer) {
 }
 
 void cdilla_ast_free(Cdilla_Ast *ast) {
-    for (size_t i = 0; i < ast->code_blocks.count; ++i) {
+    for (size_t i = 0; i < da_count(&ast->code_blocks); ++i) {
         da_free(&ast->code_blocks.items[i]);
     }
     da_free(&ast->code_blocks);
-    da_free(&ast->expressions);
-    da_free(&ast->procedures);
+    da_free(&ast->exprs);
+    da_free(&ast->procs);
     sb_free(&ast->strings);
 }
 
 void cdilla_ast_print(Cdilla_Ast *ast) {
     printf("Procedures:\n");
-    for (size_t i = 0; i < ast->procedures.count; ++i) {
-        Cdilla_Procedure *proc = &ast->procedures.items[i];
+    for (size_t i = 0; i < da_count(&ast->procs); ++i) {
+        Cdilla_Proc *proc = &ast->procs.items[i];
         printf(SV_FMT": code_block_id: %zu\n", SV_ARG(proc->name), proc->code_block_id);
     }
     printf("\n");
 
     printf("Code_Blocks:\n");
-    for (size_t i = 0; i < ast->code_blocks.count; ++i) {
+    for (size_t i = 0; i < da_count(&ast->code_blocks); ++i) {
         Cdilla_Code_Block *code_block = &ast->code_blocks.items[i];
         printf("%zu:\n", i);
-        if (code_block->count == 0) printf("<empty>\n");
-        for (size_t j = 0; j < code_block->count; ++j) {
-            Cdilla_Statement *statement = &code_block->items[j];
-            switch (statement->kind) {
-            case CDILLA_STATEMENT_PRINT: {
-                printf("print: expression_id: %zu\n", statement->as.print.expr_id);
+        if (da_count(code_block) == 0) printf("<empty>\n");
+        for (size_t j = 0; j < da_count(code_block); ++j) {
+            Cdilla_Stmt *stmt = &code_block->items[j];
+            switch (stmt->kind) {
+            case CDILLA_STMT_PRINT: {
+                printf("print: expression_id: %zu\n", stmt->as.print.expr_id);
             } break;
-            case CDILLA_STATEMENT_PROC_CALL: {
-                printf("proc_call: name: "SV_FMT"\n", SV_ARG(statement->as.proc_call.name));
+            case CDILLA_STMT_PROC_CALL: {
+                printf("proc_call: name: "SV_FMT"\n", SV_ARG(stmt->as.proc_call.name));
             } break;
             default: assert(0 && "unreachable");
             }
@@ -214,10 +213,10 @@ void cdilla_ast_print(Cdilla_Ast *ast) {
         printf("\n");
     }
 
-    printf("Expressions:\n");
-    for (size_t i = 0; i < ast->expressions.count; ++i) {
+    printf("Exprs:\n");
+    for (size_t i = 0; i < da_count(&ast->exprs); ++i) {
         printf("%zu: ", i);
-        Cdilla_Expression *expr = &ast->expressions.items[i];
+        Cdilla_Expr *expr = &ast->exprs.items[i];
         switch (expr->kind) {
         case CDILLA_EXPRESSION_I32: {
             printf("Integer: %d", expr->as.int32);
@@ -232,7 +231,7 @@ void cdilla_ast_print(Cdilla_Ast *ast) {
     printf("\n");
 
     printf("Strings:\n");
-    for (size_t i = 0; i < ast->strings.count; ++i) {
+    for (size_t i = 0; i < da_count(&ast->strings); ++i) {
         printf("0x%02X ", (u8) ast->strings.items[i]);
     }
     printf("\n");
