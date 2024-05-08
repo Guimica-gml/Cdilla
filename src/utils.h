@@ -97,6 +97,10 @@ typedef struct {
     size_t count;
 } String_View;
 
+size_t da_append_impl(void **items, Da_Header *header, const void *item, size_t item_size);
+void da_set_impl(void *items, Da_Header *header, const void *item, size_t item_size, size_t index);
+void *da_get_impl(void *items, Da_Header *header, size_t item_size, size_t index);
+
 String_View sv_from_cstr(const char *cstr);
 String_View sv_from_sb(const String_Builder *sb);
 char sv_chop_char(String_View *sv);
