@@ -1,6 +1,6 @@
 proc main() {
-    print("😃: Hello, world!\n");
-    print("😥: Good bye, world!\n");
+    print("Hello, world!\n");
+    print("Good bye, world!\n");
     second();
 }
 

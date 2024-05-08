@@ -35,12 +35,18 @@ const char *cdilla_token_kind_cstr_impl(Cdilla_Token_Kind kind, const char *file
     exit(1);
 }
 
-size_t utf8_char_size(char ch) {
+#define utf8_char_size(ch) \
+    utf8_char_size_impl(ch, __FILE__, __LINE__)
+
+size_t utf8_char_size_impl(char ch, const char *file, int line) {
     if ((ch & (1 << 7)) == 0) return 1;
     if ((ch & (1 << 5)) == 0) return 2;
     if ((ch & (1 << 4)) == 0) return 3;
     if ((ch & (1 << 3)) == 0) return 4;
-    assert(0 && "unreachable");
+    fprintf(
+        stderr, "%s:%d: Error: either not valid utf8 char or a continuation to utf8 char\n",
+        file, line);
+    exit(1);
 }
 
 size_t utf8_sv_char_count(String_View sv) {

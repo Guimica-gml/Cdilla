@@ -17,7 +17,7 @@ typedef enum {
 } Cdilla_Expression_Kind;
 
 typedef union {
-    i32 int_32;
+    i32 int32;
     size_t string_index;
 } Cdilla_Expression_As;
 
@@ -160,9 +160,9 @@ Cdilla_Expression_Id cdilla_parse_expression(Cdilla_Ast *ast, Cdilla_Lexer *lexe
     Cdilla_Token token = cdilla_parse_expect(lexer, CDILLA_TOKEN_INTEGER, CDILLA_TOKEN_STRING);
     switch (token.kind) {
     case CDILLA_TOKEN_INTEGER: {
-        i32 int_32 = sv_to_i32(token.text);
+        i32 int32 = sv_to_i32(token.text);
         expression.kind = CDILLA_EXPRESSION_I32;
-        expression.as.int_32 = int_32;
+        expression.as.int32 = int32;
     } break;
     case CDILLA_TOKEN_STRING: {
         size_t begin = ast->strings.count;
@@ -279,10 +279,10 @@ void cdilla_ast_free(Cdilla_Ast *ast) {
 }
 
 void cdilla_ast_print(Cdilla_Ast *ast) {
-    printf("Functions:\n");
+    printf("Procedures:\n");
     for (size_t i = 0; i < ast->procedures.count; ++i) {
         Cdilla_Procedure *proc = &ast->procedures.items[i];
-        printf(SV_FMT": code block id: %zu\n", SV_ARG(proc->name), proc->code_block_id);
+        printf(SV_FMT": code_block_id: %zu\n", SV_ARG(proc->name), proc->code_block_id);
     }
     printf("\n");
 
@@ -295,10 +295,10 @@ void cdilla_ast_print(Cdilla_Ast *ast) {
             Cdilla_Statement *statement = &code_block->items[j];
             switch (statement->kind) {
             case CDILLA_STATEMENT_PRINT: {
-                printf("print: expression id: %zu\n", statement->as.print.expr_id);
+                printf("print: expression_id: %zu\n", statement->as.print.expr_id);
             } break;
             case CDILLA_STATEMENT_PROC_CALL: {
-                printf("proc_call: proc name: "SV_FMT"\n", SV_ARG(statement->as.proc_call.name));
+                printf("proc_call: name: "SV_FMT"\n", SV_ARG(statement->as.proc_call.name));
             } break;
             default: assert(0 && "unreachable");
             }
@@ -312,7 +312,7 @@ void cdilla_ast_print(Cdilla_Ast *ast) {
         Cdilla_Expression *expr = &ast->expressions.items[i];
         switch (expr->kind) {
         case CDILLA_EXPRESSION_I32: {
-            printf("Integer: %d", expr->as.int_32);
+            printf("Integer: %d", expr->as.int32);
         } break;
         case CDILLA_EXPRESSION_STRING: {
             printf("String Index: %zu", expr->as.string_index);
@@ -325,7 +325,7 @@ void cdilla_ast_print(Cdilla_Ast *ast) {
 
     printf("Strings:\n");
     for (size_t i = 0; i < ast->strings.count; ++i) {
-        printf("0x%02X ", (unsigned char) ast->strings.items[i]);
+        printf("0x%02X ", (u8) ast->strings.items[i]);
     }
     printf("\n");
 
