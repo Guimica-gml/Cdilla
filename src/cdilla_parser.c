@@ -111,7 +111,7 @@ Cdilla_Expr_Id cdilla_parse_expression(Cdilla_Ast *ast, Cdilla_Lexer *lexer) {
     return da_append(&ast->exprs, expr);
 }
 
-Cdilla_Code_Block_Id cdilla_parse_code_block(Cdilla_Ast *ast, Cdilla_Lexer *lexer) {
+Cdilla_Code_Block cdilla_parse_code_block(Cdilla_Ast *ast, Cdilla_Lexer *lexer) {
     Cdilla_Code_Block code_block = {0};
     cdilla_parse_expect(lexer, CDILLA_TOKEN_OPEN_CURLY);
 
@@ -148,7 +148,7 @@ Cdilla_Code_Block_Id cdilla_parse_code_block(Cdilla_Ast *ast, Cdilla_Lexer *lexe
         token = cdilla_parse_next(lexer);
     }
 
-    return da_append(&ast->code_blocks, code_block);
+    return code_block;
 }
 
 Cdilla_Ast cdilla_parse(Cdilla_Lexer *lexer) {
@@ -162,8 +162,8 @@ Cdilla_Ast cdilla_parse(Cdilla_Lexer *lexer) {
             cdilla_parse_expect(lexer, CDILLA_TOKEN_OPEN_PAREN);
             cdilla_parse_expect(lexer, CDILLA_TOKEN_CLOSE_PAREN);
 
-            Cdilla_Code_Block_Id block_id = cdilla_parse_code_block(&ast, lexer);
-            Cdilla_Proc proc = { ident.text, block_id };
+            Cdilla_Code_Block block = cdilla_parse_code_block(&ast, lexer);
+            Cdilla_Proc proc = { ident.text, block };
             da_append(&ast.procs, proc);
         } break;
         case CDILLA_TOKEN_END: {
@@ -176,12 +176,11 @@ Cdilla_Ast cdilla_parse(Cdilla_Lexer *lexer) {
 }
 
 void cdilla_ast_free(Cdilla_Ast *ast) {
-    for (size_t i = 0; i < da_count(&ast->code_blocks); ++i) {
-        da_free(&ast->code_blocks.items[i]);
+    for (size_t i = 0; i < da_count(&ast->procs); ++i) {
+        da_free(&ast->procs.items[i].code_block);
     }
-    da_free(&ast->code_blocks);
-    da_free(&ast->exprs);
     da_free(&ast->procs);
+    da_free(&ast->exprs);
     sb_free(&ast->strings);
 }
 
@@ -189,23 +188,15 @@ void cdilla_ast_print(Cdilla_Ast *ast) {
     printf("Procedures:\n");
     for (size_t i = 0; i < da_count(&ast->procs); ++i) {
         Cdilla_Proc *proc = &ast->procs.items[i];
-        printf(SV_FMT": code_block_id: %zu\n", SV_ARG(proc->name), proc->code_block_id);
-    }
-    printf("\n");
-
-    printf("Code_Blocks:\n");
-    for (size_t i = 0; i < da_count(&ast->code_blocks); ++i) {
-        Cdilla_Code_Block *code_block = &ast->code_blocks.items[i];
-        printf("%zu:\n", i);
-        if (da_count(code_block) == 0) printf("<empty>\n");
-        for (size_t j = 0; j < da_count(code_block); ++j) {
-            Cdilla_Stmt *stmt = &code_block->items[j];
+        printf(SV_FMT":\n", SV_ARG(proc->name));
+        for (size_t j = 0; j < da_count(&proc->code_block); ++j) {
+            Cdilla_Stmt *stmt = &proc->code_block.items[j];
             switch (stmt->kind) {
             case CDILLA_STMT_PRINT: {
-                printf("print: expression_id: %zu\n", stmt->as.print.expr_id);
+                printf("- print: expression_id: %zu\n", stmt->as.print.expr_id);
             } break;
             case CDILLA_STMT_PROC_CALL: {
-                printf("proc_call: name: "SV_FMT"\n", SV_ARG(stmt->as.proc_call.name));
+                printf("- proc_call: name: "SV_FMT"\n", SV_ARG(stmt->as.proc_call.name));
             } break;
             default: assert(0 && "unreachable");
             }
@@ -231,8 +222,10 @@ void cdilla_ast_print(Cdilla_Ast *ast) {
     printf("\n");
 
     printf("Strings:\n");
+    size_t column_size = 8;
     for (size_t i = 0; i < da_count(&ast->strings); ++i) {
-        printf("0x%02X ", (u8) ast->strings.items[i]);
+        printf("0x%02X", (u8) ast->strings.items[i]);
+        printf("%s", ((i + 1) % column_size == 0) ? "\n" : " ");
     }
     printf("\n");
 
