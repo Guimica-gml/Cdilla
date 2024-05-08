@@ -69,7 +69,12 @@ Errno read_file(const char *filepath, String_Builder *sb) {
     int result = 0;
     char *content = NULL;
 
-    FILE *file = fopen(filepath, "r");
+    // NOTE(nic): opening in binary mode, because I don't want it to convert '\r\n' to '\n'
+    //            this is because there's a problem with `file_size` and `read_size`
+    //            being different because windows converts the break line characters
+    //            which fails silently because technically no error happened
+    //            but our code really thinks something went bad
+    FILE *file = fopen(filepath, "rb");
     if (file == NULL) defer_return(errno);
     if (fseek(file, 0, SEEK_END) != 0) defer_return(errno);
     long file_size = ftell(file);
