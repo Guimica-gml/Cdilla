@@ -1,6 +1,8 @@
 #include "./cdilla_lexer.h"
 
-Cdilla_Token_Literal cdilla_symbols[] = {
+const String_View cdilla_comment_begin = SV("//");
+
+const Cdilla_Token_Literal cdilla_symbols[] = {
     { .text = SV("("), .kind = CDILLA_TOKEN_OPEN_PAREN },
     { .text = SV(")"), .kind = CDILLA_TOKEN_CLOSE_PAREN },
     { .text = SV("{"), .kind = CDILLA_TOKEN_OPEN_CURLY },
@@ -8,7 +10,7 @@ Cdilla_Token_Literal cdilla_symbols[] = {
     { .text = SV(";"), .kind = CDILLA_TOKEN_SEMI_COLON },
 };
 
-Cdilla_Token_Literal cdilla_keywords[] = {
+const Cdilla_Token_Literal cdilla_keywords[] = {
     { .text = SV("proc"), .kind = CDILLA_TOKEN_PROC },
     { .text = SV("print"), .kind = CDILLA_TOKEN_PRINT },
 };
@@ -18,6 +20,7 @@ const char *cdilla_token_kind_cstr_impl(Cdilla_Token_Kind kind, const char *file
     case CDILLA_TOKEN_UNKNOWN:         return "<unknown token>";
     case CDILLA_TOKEN_UNCLOSED_STRING: return "<unclosed string>";
     case CDILLA_TOKEN_IDENTIFIER:      return "identifier";
+    case CDILLA_TOKEN_COMMENT:         return "comment";
     case CDILLA_TOKEN_INTEGER:         return "literal integer";
     case CDILLA_TOKEN_STRING:          return "literal string";
     case CDILLA_TOKEN_PROC:            return "proc";
@@ -119,8 +122,11 @@ bool cdilla_lexer_starts_with(Cdilla_Lexer *lexer, String_View prefix) {
     return memcmp(&lexer->content.data[lexer->index], prefix.data, prefix.count) == 0;
 }
 
+int cdilla_not_linebreak(int ch) {
+    return ch != '\n';
+}
+
 Cdilla_Token cdilla_lexer_next(Cdilla_Lexer *lexer) {
-    // TODO: lex comments
     cdilla_lexer_cut_while(lexer, isspace);
 
     Cdilla_Loc loc = {
@@ -135,6 +141,11 @@ Cdilla_Token cdilla_lexer_next(Cdilla_Lexer *lexer) {
             .kind = CDILLA_TOKEN_END,
             .loc = loc,
         };
+    }
+
+    if (cdilla_lexer_starts_with(lexer, cdilla_comment_begin)) {
+        String_View text = cdilla_lexer_cut_while(lexer, cdilla_not_linebreak);
+        return (Cdilla_Token) { text, CDILLA_TOKEN_COMMENT, loc };
     }
 
     for (size_t i = 0; i < array_len(cdilla_symbols); ++i) {

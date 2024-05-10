@@ -16,8 +16,12 @@ Escape_Char_Def escape_chars[] = {
 };
 
 Cdilla_Token cdilla_parse_next(Cdilla_Lexer *lexer) {
+yet_again:;
     Cdilla_Token token = cdilla_lexer_next(lexer);
     switch (token.kind) {
+    case CDILLA_TOKEN_COMMENT: {
+        goto yet_again;
+    } break;
     case CDILLA_TOKEN_UNKNOWN: {
         fprintf(
             stderr, LOC_FMT": Error: unkown token: "SV_FMT"\n",

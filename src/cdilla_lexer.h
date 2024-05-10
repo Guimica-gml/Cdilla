@@ -21,6 +21,7 @@ typedef enum {
 
     // Special
     CDILLA_TOKEN_IDENTIFIER,
+    CDILLA_TOKEN_COMMENT,
     CDILLA_TOKEN_END,
 
     // Literals
