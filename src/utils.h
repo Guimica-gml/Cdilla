@@ -14,8 +14,11 @@
 
 #define defer_return(res) do { result = (res); goto defer; } while (0)
 
-#define SV(cstr) { .data = (cstr), .count = sizeof(cstr) - 1 }
+#define SOURCE_LOC (Source_Loc) { __FILE__, __LINE__ }
+#define SL_FMT "%s:%d"
+#define SL_ARG(sl) (sl).file, (sl).line
 
+#define SV(cstr) { .data = (cstr), .count = sizeof(cstr) - 1 }
 #define SV_FMT "%.*s"
 #define SV_ARG(sv) (int) (sv).count, (sv).data
 
@@ -29,6 +32,14 @@
     ((byte) & 0x04 ? '1' : '0'), \
     ((byte) & 0x02 ? '1' : '0'), \
     ((byte) & 0x01 ? '1' : '0')
+
+#define PANIC(loc, ...)                                     \
+    do {                                                    \
+        fprintf(stderr, SL_FMT": Panic: ", SL_ARG(loc));    \
+        fprintf(stderr, __VA_ARGS__);                       \
+        fprintf(stderr, "\n");                              \
+        exit(1);                                            \
+    } while (0);
 
 typedef int8_t i8;
 typedef int16_t i16;
@@ -90,6 +101,11 @@ typedef struct {
 #define da_count(da) (da)->header.count
 #define da_cap(da) (da)->header.capacity
 
+typedef struct {
+    const char *file;
+    int line;
+} Source_Loc;
+
 typedef Da_Type(char) String_Builder;
 
 typedef struct {
@@ -103,14 +119,9 @@ void *da_get_impl(void *items, Da_Header *header, size_t item_size, size_t index
 
 String_View sv_from_cstr(const char *cstr);
 String_View sv_from_sb(const String_Builder *sb);
-char sv_chop_char(String_View *sv);
-String_View sv_chop_by_delim(String_View *sv, char delim);
-void sv_trim_whitespace(String_View *sv);
-bool sv_eq(String_View a, String_View b);
-bool sv_starts_with(String_View sv, String_View prefix);
+bool sv_equals(String_View a, String_View b);
 
 void sb_add_sized_str(String_Builder *sb, const char *data, size_t size);
-void sb_free(String_Builder *sb);
 
 Errno read_file(const char *filepath, String_Builder *sb);
 

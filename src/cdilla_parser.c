@@ -5,7 +5,7 @@ typedef struct {
     char escape_ch;
 } Escape_Char_Def;
 
-Escape_Char_Def escape_chars[] = {
+static Escape_Char_Def escape_chars[] = {
     { .ch = 'n', .escape_ch = '\n' },
     { .ch = 'r', .escape_ch = '\r' },
     { .ch = 't', .escape_ch = '\t' },
@@ -24,14 +24,14 @@ yet_again:;
     } break;
     case CDILLA_TOKEN_UNKNOWN: {
         fprintf(
-            stderr, LOC_FMT": Error: unkown token: "SV_FMT"\n",
-            LOC_ARG(token.loc), SV_ARG(token.text));
+            stderr, CDILLA_LOC_FMT": Error: unkown token: "SV_FMT"\n",
+            CDILLA_LOC_ARG(token.loc), SV_ARG(token.text));
         exit(1);
     } break;
     case CDILLA_TOKEN_UNCLOSED_STRING: {
         fprintf(
-            stderr, LOC_FMT": Error: unclosed string: "SV_FMT"\n",
-            LOC_ARG(token.loc), SV_ARG(token.text));
+            stderr, CDILLA_LOC_FMT": Error: unclosed string: "SV_FMT"\n",
+            CDILLA_LOC_ARG(token.loc), SV_ARG(token.text));
         exit(1);
     } break;
     default: {}
@@ -48,7 +48,7 @@ Cdilla_Token cdilla_parse_expect_impl(Cdilla_Lexer *lexer, Cdilla_Token_Kind kin
     }
 
     // NOTE(nic): Looks kinda goofy, but does what we need it to do
-    fprintf(stderr, LOC_FMT": Error: expected ", LOC_ARG(token.loc));
+    fprintf(stderr, CDILLA_LOC_FMT": Error: expected ", CDILLA_LOC_ARG(token.loc));
     for (size_t i = 0; i < count; ++i) {
         fprintf(stderr, "`%s`", cdilla_token_kind_cstr(kinds[i]));
         const char *end = (i == count - 2) ? " or " : ", ";
@@ -95,8 +95,8 @@ Cdilla_Expr_Id cdilla_parse_expression(Cdilla_Ast *ast, Cdilla_Lexer *lexer) {
                 if (!exists) {
                     fprintf(
                         stderr,
-                        LOC_FMT": Error: escape sequence `\\%c` is not supported\n",
-                        LOC_ARG(token.loc), next_ch);
+                        CDILLA_LOC_FMT": Error: escape sequence `\\%c` is not supported\n",
+                        CDILLA_LOC_ARG(token.loc), next_ch);
                     exit(1);
                 }
             } else {
@@ -186,7 +186,7 @@ void cdilla_ast_free(Cdilla_Ast *ast) {
     da_free(&ast->code_blocks);
     da_free(&ast->exprs);
     da_free(&ast->procs);
-    sb_free(&ast->strings);
+    da_free(&ast->strings);
 }
 
 void cdilla_ast_print(Cdilla_Ast *ast) {

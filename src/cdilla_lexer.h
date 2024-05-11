@@ -3,8 +3,8 @@
 
 #include "./utils.h"
 
-#define LOC_FMT "%s:%zu:%zu"
-#define LOC_ARG(loc) (loc).filepath, (loc).row, (loc).column
+#define CDILLA_LOC_FMT "%s:%zu:%zu"
+#define CDILLA_LOC_ARG(loc) (loc).filepath, (loc).row, (loc).column
 
 typedef struct {
     const char *filepath;
@@ -58,20 +58,18 @@ typedef struct {
 } Cdilla_Token_Literal;
 
 #define cdilla_lexer_cut_char(lexer) \
-    cdilla_lexer_cut_char_impl((lexer), __FILE__, __LINE__)
-
+    cdilla_lexer_cut_char_loc((lexer), SOURCE_LOC)
 #define cdilla_lexer_cut(lexer, count) \
-    cdilla_lexer_cut_impl((lexer), (count), __FILE__, __LINE__)
-
+    cdilla_lexer_cut_loc((lexer), (count), SOURCE_LOC)
 #define cdilla_token_kind_cstr(kind) \
-    cdilla_token_kind_cstr_impl(kind, __FILE__, __LINE__)
+    cdilla_token_kind_cstr_loc((kind), SOURCE_LOC)
 
-const char *cdilla_token_kind_cstr_impl(Cdilla_Token_Kind kind, const char *file, int line);
+const char *cdilla_token_kind_cstr_loc(Cdilla_Token_Kind kind, Source_Loc loc);
 
 Cdilla_Lexer cdilla_lexer_new(String_View content, const char *source_filepath);
 // NOTE(nic): this respects utf8 strings, that's why it returns String_View
-String_View cdilla_lexer_cut_char_impl(Cdilla_Lexer *lexer, const char *file, int line);
-String_View cdilla_lexer_cut_impl(Cdilla_Lexer *lexer, size_t count, const char *file, int line);
+String_View cdilla_lexer_cut_char_loc(Cdilla_Lexer *lexer, Source_Loc loc);
+String_View cdilla_lexer_cut_loc(Cdilla_Lexer *lexer, size_t count, Source_Loc loc);
 // NOTE(nic): isdigit, isalnum and isspace are int (*)(int), don't ask me why
 String_View cdilla_lexer_cut_while(Cdilla_Lexer *lexer, int (*predicate)(int));
 bool cdilla_lexer_starts_with(Cdilla_Lexer *lexer, String_View prefix);

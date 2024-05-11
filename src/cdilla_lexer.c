@@ -1,8 +1,8 @@
 #include "./cdilla_lexer.h"
 
-const String_View cdilla_comment_begin = SV("//");
+static String_View cdilla_comment_begin = SV("//");
 
-const Cdilla_Token_Literal cdilla_symbols[] = {
+static Cdilla_Token_Literal cdilla_symbols[] = {
     { .text = SV("("), .kind = CDILLA_TOKEN_OPEN_PAREN },
     { .text = SV(")"), .kind = CDILLA_TOKEN_CLOSE_PAREN },
     { .text = SV("{"), .kind = CDILLA_TOKEN_OPEN_CURLY },
@@ -10,12 +10,12 @@ const Cdilla_Token_Literal cdilla_symbols[] = {
     { .text = SV(";"), .kind = CDILLA_TOKEN_SEMI_COLON },
 };
 
-const Cdilla_Token_Literal cdilla_keywords[] = {
+static Cdilla_Token_Literal cdilla_keywords[] = {
     { .text = SV("proc"), .kind = CDILLA_TOKEN_PROC },
     { .text = SV("print"), .kind = CDILLA_TOKEN_PRINT },
 };
 
-const char *cdilla_token_kind_cstr_impl(Cdilla_Token_Kind kind, const char *file, int line) {
+const char *cdilla_token_kind_cstr_loc(Cdilla_Token_Kind kind, Source_Loc loc) {
     switch (kind) {
     case CDILLA_TOKEN_UNKNOWN:         return "<unknown token>";
     case CDILLA_TOKEN_UNCLOSED_STRING: return "<unclosed string>";
@@ -32,37 +32,18 @@ const char *cdilla_token_kind_cstr_impl(Cdilla_Token_Kind kind, const char *file
     case CDILLA_TOKEN_END:             return "<end of file>";
     case CDILLA_TOKEN_SEMI_COLON:      return ";";
     }
-    fprintf(
-        stderr, "%s:%d: Error: trying to convert uknown token kind to cstr: %d",
-        file, line, kind);
-    exit(1);
+    PANIC(loc, "trying to convert uknown token kind to cstr: %d", kind);
 }
 
 #define utf8_char_size(ch) \
-    utf8_char_size_impl(ch, __FILE__, __LINE__)
+    utf8_char_size_loc(ch, SOURCE_LOC)
 
-size_t utf8_char_size_impl(char ch, const char *file, int line) {
+static size_t utf8_char_size_loc(char ch, Source_Loc loc) {
     if ((ch & (1 << 7)) == 0) return 1;
     if ((ch & (1 << 5)) == 0) return 2;
     if ((ch & (1 << 4)) == 0) return 3;
     if ((ch & (1 << 3)) == 0) return 4;
-    fprintf(
-        stderr, "%s:%d: Error: either not valid utf8 char or a continuation to utf8 char\n",
-        file, line);
-    exit(1);
-}
-
-size_t utf8_sv_char_count(String_View sv) {
-    size_t actual_count = 0;
-
-    size_t i = 0;
-    while (i < sv.count) {
-        size_t char_size = utf8_char_size(sv.data[i]);
-        i += char_size;
-        actual_count += 1;
-    }
-
-    return actual_count;
+    PANIC(loc, "either not valid utf8 char or a continuation to utf8 char");
 }
 
 Cdilla_Lexer cdilla_lexer_new(String_View content, const char *source_filepath) {
@@ -73,10 +54,9 @@ Cdilla_Lexer cdilla_lexer_new(String_View content, const char *source_filepath) 
     return lexer;
 }
 
-String_View cdilla_lexer_cut_char_impl(Cdilla_Lexer *lexer, const char *file, int line) {
+String_View cdilla_lexer_cut_char_loc(Cdilla_Lexer *lexer, Source_Loc loc) {
     if (lexer->index >= lexer->content.count) {
-        fprintf(stderr, "%s:%d: Error: trying to cut out of lexer bounds", file, line);
-        exit(1);
+        PANIC(loc, "trying to cut out of lexer bounds");
     }
 
     const char *ch = &lexer->content.data[lexer->index];
@@ -91,28 +71,28 @@ String_View cdilla_lexer_cut_char_impl(Cdilla_Lexer *lexer, const char *file, in
     return (String_View) { ch, char_size };
 }
 
-String_View cdilla_lexer_cut_impl(Cdilla_Lexer *lexer, size_t count, const char *file, int line) {
-    const char *begin = &lexer->content.data[lexer->index];
-    size_t actual_count = 0;
+String_View cdilla_lexer_cut_loc(Cdilla_Lexer *lexer, size_t count, Source_Loc loc) {
+    const char *head = &lexer->content.data[lexer->index];
+    size_t byte_count = 0;
 
     for (size_t i = 0; i < count; ++i) {
-        String_View ch = cdilla_lexer_cut_char_impl(lexer, file, line);
-        actual_count += ch.count;
+        String_View ch = cdilla_lexer_cut_char_loc(lexer, loc);
+        byte_count += ch.count;
     }
 
-    return (String_View) { begin, actual_count };
+    return (String_View) { head, byte_count };
 }
 
 String_View cdilla_lexer_cut_while(Cdilla_Lexer *lexer, int (*predicate)(int)) {
-    const char *begin = &lexer->content.data[lexer->index];
-    size_t actual_count = 0;
+    const char *head = &lexer->content.data[lexer->index];
+    size_t byte_count = 0;
 
     while (lexer->index < lexer->content.count && predicate(lexer->content.data[lexer->index])) {
         String_View ch = cdilla_lexer_cut_char(lexer);
-        actual_count += ch.count;
+        byte_count += ch.count;
     }
 
-    return (String_View) { begin, actual_count };
+    return (String_View) { head, byte_count };
 }
 
 bool cdilla_lexer_starts_with(Cdilla_Lexer *lexer, String_View prefix) {
@@ -161,7 +141,7 @@ Cdilla_Token cdilla_lexer_next(Cdilla_Lexer *lexer) {
         Cdilla_Token_Kind kind = CDILLA_TOKEN_IDENTIFIER;
         for (size_t i = 0; i < array_len(cdilla_keywords); ++i) {
             Cdilla_Token_Literal *literal = &cdilla_keywords[i];
-            if (sv_eq(text, literal->text)) {
+            if (sv_equals(text, literal->text)) {
                 kind = literal->kind;
             }
         }
@@ -174,10 +154,10 @@ Cdilla_Token cdilla_lexer_next(Cdilla_Lexer *lexer) {
     }
 
     if (lexer->content.data[lexer->index] == '"') {
-        const char *begin = &lexer->content.data[lexer->index];
+        const char *head = &lexer->content.data[lexer->index];
         cdilla_lexer_cut_char(lexer);
 
-        size_t begin_count = lexer->index;
+        size_t head_index = lexer->index;
         Cdilla_Token_Kind kind = CDILLA_TOKEN_UNCLOSED_STRING;
 
         while (lexer->index < lexer->content.count) {
@@ -198,7 +178,7 @@ Cdilla_Token cdilla_lexer_next(Cdilla_Lexer *lexer) {
             }
         }
 
-        String_View text = { begin, lexer->index - begin_count };
+        String_View text = { head, lexer->index - head_index };
         return (Cdilla_Token) { text, kind, loc };
     }
 

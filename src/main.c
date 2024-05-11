@@ -31,6 +31,6 @@ int main(int argc, char **argv) {
     cdilla_ast_print(&ast);
     cdilla_ast_free(&ast);
 
-    sb_free(&content);
+    da_free(&content);
     return 0;
 }
