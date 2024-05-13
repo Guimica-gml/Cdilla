@@ -70,7 +70,6 @@ Cdilla_Lexer cdilla_lexer_new(String_View content, const char *source_filepath);
 // NOTE(nic): this respects utf8 strings, that's why it returns String_View
 String_View cdilla_lexer_cut_char_loc(Cdilla_Lexer *lexer, Source_Loc loc);
 String_View cdilla_lexer_cut_loc(Cdilla_Lexer *lexer, size_t count, Source_Loc loc);
-// NOTE(nic): isdigit, isalnum and isspace are int (*)(int), don't ask me why
 String_View cdilla_lexer_cut_while(Cdilla_Lexer *lexer, int (*predicate)(int));
 bool cdilla_lexer_starts_with(Cdilla_Lexer *lexer, String_View prefix);
 Cdilla_Token cdilla_lexer_next(Cdilla_Lexer *lexer);

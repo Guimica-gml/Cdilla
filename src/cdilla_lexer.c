@@ -1,5 +1,8 @@
 #include "./cdilla_lexer.h"
 
+// TODO(nic): make sure the input file is valid utf8
+// TODO(nic): allow utf8 characters in identifier names
+
 static String_View cdilla_comment_begin = SV("//");
 
 static Cdilla_Token_Literal cdilla_symbols[] = {
@@ -17,19 +20,23 @@ static Cdilla_Token_Literal cdilla_keywords[] = {
 
 const char *cdilla_token_kind_cstr_loc(Cdilla_Token_Kind kind, Source_Loc loc) {
     switch (kind) {
-    case CDILLA_TOKEN_UNKNOWN:         return "<unknown token>";
-    case CDILLA_TOKEN_UNCLOSED_STRING: return "<unclosed string>";
+    case CDILLA_TOKEN_UNKNOWN:         return "unknown token";
+    case CDILLA_TOKEN_UNCLOSED_STRING: return "unclosed string";
+
     case CDILLA_TOKEN_IDENTIFIER:      return "identifier";
     case CDILLA_TOKEN_COMMENT:         return "comment";
+    case CDILLA_TOKEN_END:             return "end of file";
+
     case CDILLA_TOKEN_INTEGER:         return "literal integer";
     case CDILLA_TOKEN_STRING:          return "literal string";
+
     case CDILLA_TOKEN_PROC:            return "proc";
     case CDILLA_TOKEN_PRINT:           return "print";
+
     case CDILLA_TOKEN_OPEN_PAREN:      return "(";
     case CDILLA_TOKEN_CLOSE_PAREN:     return ")";
     case CDILLA_TOKEN_OPEN_CURLY:      return "{";
     case CDILLA_TOKEN_CLOSE_CURLY:     return "}";
-    case CDILLA_TOKEN_END:             return "<end of file>";
     case CDILLA_TOKEN_SEMI_COLON:      return ";";
     }
     PANIC(loc, "trying to convert uknown token kind to cstr: %d", kind);
@@ -87,6 +94,7 @@ String_View cdilla_lexer_cut_while(Cdilla_Lexer *lexer, int (*predicate)(int)) {
     const char *head = &lexer->content.data[lexer->index];
     size_t byte_count = 0;
 
+    // TODO(nic): pass multiline characters to predicate function
     while (lexer->index < lexer->content.count && predicate(lexer->content.data[lexer->index])) {
         String_View ch = cdilla_lexer_cut_char(lexer);
         byte_count += ch.count;
@@ -102,7 +110,7 @@ bool cdilla_lexer_starts_with(Cdilla_Lexer *lexer, String_View prefix) {
     return memcmp(&lexer->content.data[lexer->index], prefix.data, prefix.count) == 0;
 }
 
-int cdilla_not_linebreak(int ch) {
+static int ch_not_linebreak(int ch) {
     return ch != '\n';
 }
 
@@ -124,7 +132,7 @@ Cdilla_Token cdilla_lexer_next(Cdilla_Lexer *lexer) {
     }
 
     if (cdilla_lexer_starts_with(lexer, cdilla_comment_begin)) {
-        String_View text = cdilla_lexer_cut_while(lexer, cdilla_not_linebreak);
+        String_View text = cdilla_lexer_cut_while(lexer, ch_not_linebreak);
         return (Cdilla_Token) { text, CDILLA_TOKEN_COMMENT, loc };
     }
 

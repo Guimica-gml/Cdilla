@@ -1,5 +1,9 @@
 #include "./cdilla_parser.h"
 
+// TODO(nic): not stop parsing at first error,
+//            keep the errors in a list and parse until the end
+// TODO(nic): better error messages
+
 typedef struct {
     char ch;
     char escape_ch;
