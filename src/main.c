@@ -1,6 +1,7 @@
 #include "./utils.h"
 #include "./cdilla_lexer.h"
 #include "./cdilla_parser.h"
+#include "./cdilla_interpreter.h"
 
 void print_usage(FILE *stream, const char *program) {
     fprintf(stream, "Usage: %s <filepath>\n", program);
@@ -28,7 +29,9 @@ int main(int argc, char **argv) {
     Cdilla_Lexer lexer = cdilla_lexer_new(code, source_filepath);
     Cdilla_Ast ast = cdilla_parse(&lexer);
 
-    cdilla_ast_print(&ast);
+    cdilla_interpret(&ast);
+
+    // cdilla_ast_print(&ast);
     cdilla_ast_free(&ast);
 
     da_free(&content);
