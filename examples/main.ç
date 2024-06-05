@@ -6,6 +6,6 @@ proc main() {
 }
 
 proc second() {
-    print(10);
-    print("\n");
+    let a = "paia\n";
+    print(a);
 }

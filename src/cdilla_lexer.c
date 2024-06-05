@@ -1,7 +1,7 @@
 #include "./cdilla_lexer.h"
 
 // TODO(nic): make sure the input file is valid utf8
-// TODO(nic): allow utf8 characters in identifier names
+// TODO(nic): allow utf8 characters in identifier names (this gonna be hard)
 
 static String_View cdilla_comment_begin = SV("//");
 
@@ -11,11 +11,13 @@ static Cdilla_Token_Literal cdilla_symbols[] = {
     { .text = SV("{"), .kind = CDILLA_TOKEN_OPEN_CURLY },
     { .text = SV("}"), .kind = CDILLA_TOKEN_CLOSE_CURLY },
     { .text = SV(";"), .kind = CDILLA_TOKEN_SEMI_COLON },
+    { .text = SV("="), .kind = CDILLA_TOKEN_EQUALS },
 };
 
 static Cdilla_Token_Literal cdilla_keywords[] = {
     { .text = SV("proc"), .kind = CDILLA_TOKEN_PROC },
     { .text = SV("print"), .kind = CDILLA_TOKEN_PRINT },
+    { .text = SV("let"), .kind = CDILLA_TOKEN_LET },
 };
 
 const char *cdilla_token_kind_cstr_loc(Cdilla_Token_Kind kind, Source_Loc loc) {
@@ -32,12 +34,14 @@ const char *cdilla_token_kind_cstr_loc(Cdilla_Token_Kind kind, Source_Loc loc) {
 
     case CDILLA_TOKEN_PROC:            return "proc";
     case CDILLA_TOKEN_PRINT:           return "print";
+    case CDILLA_TOKEN_LET:             return "let";
 
     case CDILLA_TOKEN_OPEN_PAREN:      return "(";
     case CDILLA_TOKEN_CLOSE_PAREN:     return ")";
     case CDILLA_TOKEN_OPEN_CURLY:      return "{";
     case CDILLA_TOKEN_CLOSE_CURLY:     return "}";
     case CDILLA_TOKEN_SEMI_COLON:      return ";";
+    case CDILLA_TOKEN_EQUALS:          return "=";
     }
     PANIC(loc, "trying to convert uknown token kind to cstr: %d", kind);
 }

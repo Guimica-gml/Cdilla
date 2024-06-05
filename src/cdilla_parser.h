@@ -7,16 +7,19 @@ typedef size_t Cdilla_Expr_Id;
 typedef size_t Cdilla_Code_Block_Id;
 
 typedef enum {
-    CDILLA_EXPRESSION_I32,
-    CDILLA_EXPRESSION_STRING,
+    CDILLA_EXPR_I64,
+    CDILLA_EXPR_STRING,
+    CDILLA_EXPR_IDENTIFIER,
 } Cdilla_Expr_Kind;
 
 typedef union {
-    i32 int32;
+    i64 int64;
     size_t string_index;
+    String_View ident;
 } Cdilla_Expr_As;
 
 typedef struct {
+    Cdilla_Loc loc;
     Cdilla_Expr_Kind kind;
     Cdilla_Expr_As as;
 } Cdilla_Expr;
@@ -24,6 +27,7 @@ typedef struct {
 typedef enum {
     CDILLA_STMT_PRINT,
     CDILLA_STMT_PROC_CALL,
+    CDILLA_STMT_LET,
 } Cdilla_Stmt_Kind;
 
 typedef struct {
@@ -34,9 +38,15 @@ typedef struct {
     String_View name;
 } Cdilla_Stmt_As_Proc_Call;
 
+typedef struct {
+    String_View var_name;
+    Cdilla_Expr_Id expr_id;
+} Cdilla_Stmt_As_Let;
+
 typedef union {
     Cdilla_Stmt_As_Print print;
     Cdilla_Stmt_As_Proc_Call proc_call;
+    Cdilla_Stmt_As_Let let;
 } Cdilla_Stmt_As;
 
 typedef struct {

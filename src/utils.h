@@ -14,7 +14,7 @@
 
 #define defer_return(res) do { result = (res); goto defer; } while (0)
 
-#define SOURCE_LOC (Source_Loc) { __FILE__, __LINE__ }
+#define SOURCE_LOC ((Source_Loc) { __FILE__, __LINE__ })
 #define SL_FMT "%s:%d"
 #define SL_ARG(sl) (sl).file, (sl).line
 

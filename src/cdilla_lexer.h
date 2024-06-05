@@ -31,6 +31,7 @@ typedef enum {
     // Keywords
     CDILLA_TOKEN_PROC,
     CDILLA_TOKEN_PRINT,
+    CDILLA_TOKEN_LET,
 
     // Symbols
     CDILLA_TOKEN_OPEN_PAREN,
@@ -38,6 +39,7 @@ typedef enum {
     CDILLA_TOKEN_OPEN_CURLY,
     CDILLA_TOKEN_CLOSE_CURLY,
     CDILLA_TOKEN_SEMI_COLON,
+    CDILLA_TOKEN_EQUALS,
 } Cdilla_Token_Kind;
 
 typedef struct {

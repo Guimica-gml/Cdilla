@@ -62,10 +62,10 @@ Cdilla_Token cdilla_parse_expect_impl(Cdilla_Lexer *lexer, Cdilla_Token_Kind kin
     exit(1);
 }
 
-i32 sv_to_i32(String_View sv) {
-    i32 result = 0;
+i64 sv_to_i64(String_View sv) {
+    i64 result = 0;
     for (size_t i = 0; i < sv.count && isdigit(sv.data[i]); ++i) {
-        result = result * 10 + (i32) sv.data[i] - '0';
+        result = result * 10 + (i64) sv.data[i] - '0';
     }
     return result;
 }
@@ -73,12 +73,22 @@ i32 sv_to_i32(String_View sv) {
 Cdilla_Expr_Id cdilla_parse_expression(Cdilla_Ast *ast, Cdilla_Lexer *lexer) {
     Cdilla_Expr expr = {0};
 
-    Cdilla_Token token = cdilla_parse_expect(lexer, CDILLA_TOKEN_INTEGER, CDILLA_TOKEN_STRING);
+    Cdilla_Token token = cdilla_parse_expect(
+        lexer,
+        CDILLA_TOKEN_INTEGER,
+        CDILLA_TOKEN_STRING,
+        CDILLA_TOKEN_IDENTIFIER);
+    expr.loc = token.loc;
+
     switch (token.kind) {
+    case CDILLA_TOKEN_IDENTIFIER: {
+        expr.kind = CDILLA_EXPR_IDENTIFIER;
+        expr.as.ident = token.text;
+    } break;
     case CDILLA_TOKEN_INTEGER: {
-        i32 int32 = sv_to_i32(token.text);
-        expr.kind = CDILLA_EXPRESSION_I32;
-        expr.as.int32 = int32;
+        i64 int64 = sv_to_i64(token.text);
+        expr.kind = CDILLA_EXPR_I64;
+        expr.as.int64 = int64;
     } break;
     case CDILLA_TOKEN_STRING: {
         size_t begin = da_count(&ast->strings);
@@ -110,7 +120,7 @@ Cdilla_Expr_Id cdilla_parse_expression(Cdilla_Ast *ast, Cdilla_Lexer *lexer) {
         char ch = '\0';
         da_append(&ast->strings, ch);
 
-        expr.kind = CDILLA_EXPRESSION_STRING;
+        expr.kind = CDILLA_EXPR_STRING;
         expr.as.string_index = begin;
     } break;
     default: assert(0 && "unreachable");
@@ -123,20 +133,26 @@ Cdilla_Code_Block_Id cdilla_parse_code_block(Cdilla_Ast *ast, Cdilla_Lexer *lexe
     Cdilla_Code_Block code_block = {0};
     cdilla_parse_expect(lexer, CDILLA_TOKEN_OPEN_CURLY);
 
-    Cdilla_Token token = cdilla_parse_expect(lexer, CDILLA_TOKEN_PRINT, CDILLA_TOKEN_IDENTIFIER, CDILLA_TOKEN_CLOSE_CURLY);
+    Cdilla_Token token = cdilla_parse_expect(
+        lexer,
+        CDILLA_TOKEN_PRINT,
+        CDILLA_TOKEN_IDENTIFIER,
+        CDILLA_TOKEN_LET,
+        CDILLA_TOKEN_CLOSE_CURLY);
+
     while (token.kind != CDILLA_TOKEN_CLOSE_CURLY) {
         Cdilla_Stmt stmt = {0};
         switch (token.kind) {
         case CDILLA_TOKEN_PRINT: {
             cdilla_parse_expect(lexer, CDILLA_TOKEN_OPEN_PAREN);
-            Cdilla_Expr_Id expression_id = cdilla_parse_expression(ast, lexer);
+            Cdilla_Expr_Id expr_id = cdilla_parse_expression(ast, lexer);
             cdilla_parse_expect(lexer, CDILLA_TOKEN_CLOSE_PAREN);
             cdilla_parse_expect(lexer, CDILLA_TOKEN_SEMI_COLON);
 
             stmt.loc = token.loc;
             stmt.kind = CDILLA_STMT_PRINT;
             stmt.as.print = (Cdilla_Stmt_As_Print) {
-                expression_id,
+                expr_id,
             };
         } break;
         case CDILLA_TOKEN_IDENTIFIER: {
@@ -148,6 +164,18 @@ Cdilla_Code_Block_Id cdilla_parse_code_block(Cdilla_Ast *ast, Cdilla_Lexer *lexe
             stmt.kind = CDILLA_STMT_PROC_CALL;
             stmt.as.proc_call = (Cdilla_Stmt_As_Proc_Call) {
                 token.text,
+            };
+        } break;
+        case CDILLA_TOKEN_LET: {
+            Cdilla_Token ident = cdilla_parse_expect(lexer, CDILLA_TOKEN_IDENTIFIER);
+            cdilla_parse_expect(lexer, CDILLA_TOKEN_EQUALS);
+            Cdilla_Expr_Id expr_id = cdilla_parse_expression(ast, lexer);
+            cdilla_parse_expect(lexer, CDILLA_TOKEN_SEMI_COLON);
+
+            stmt.loc = token.loc;
+            stmt.kind = CDILLA_STMT_LET;
+            stmt.as.let = (Cdilla_Stmt_As_Let) {
+                ident.text, expr_id
             };
         } break;
         default: assert(0 && "unreachable");
@@ -226,10 +254,10 @@ void cdilla_ast_print(Cdilla_Ast *ast) {
         printf("%zu: ", i);
         Cdilla_Expr *expr = &ast->exprs.items[i];
         switch (expr->kind) {
-        case CDILLA_EXPRESSION_I32: {
-            printf("Integer: %d", expr->as.int32);
+        case CDILLA_EXPR_I64: {
+            printf("Integer: %ld", expr->as.int64);
         } break;
-        case CDILLA_EXPRESSION_STRING: {
+        case CDILLA_EXPR_STRING: {
             printf("String Index: %zu", expr->as.string_index);
         } break;
         default: assert(0 && "unreachable");
